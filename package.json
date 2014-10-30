@@ -1,0 +1,31 @@
+{
+  "name": "postgresql-orm",
+  "version": "0.1.0",
+  "description": "node to postgresql object relational mapping",
+  "main": "postgresql-orm.js",
+  "scripts": {
+    "test": "mocha --reporter spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/nherment/node-postgresql-orm.git"
+  },
+  "keywords": [
+    "postgresql",
+    "orm"
+  ],
+  "author": "Nicolas Herment <nherment@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/nherment/node-postgresql-orm/issues"
+  },
+  "homepage": "https://github.com/nherment/node-postgresql-orm",
+  "dependencies": {
+    "lodash": "2.4.1",
+    "pg": "3.6.2"
+  },
+  "devDependencies": {
+    "mocha": "2.0.1",
+    "uuid": "2.0.1"
+  }
+}

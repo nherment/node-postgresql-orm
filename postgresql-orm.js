@@ -10,6 +10,10 @@ EntityDB.setup = function(connectionString) {
 	this._db = new DBConnection(connectionString)
 }
 
+EntityDB.db = function() {
+	return this._db
+}
+
 EntityDB.prototype.setType = function(entity) {
 	entity._type = this._dataType
 }

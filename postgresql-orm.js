@@ -1,10 +1,7 @@
 var DBConnection = require('./DBConnection.js')
 var _ = require('lodash')
 
-function EntityDB(dataType) {
-	this._dataType = dataType
-	this._db = EntityDB._db
-}
+function EntityDB() { }
 
 EntityDB.setup = function(connectionString) {
 	this._db = new DBConnection(connectionString)
@@ -14,8 +11,54 @@ EntityDB.db = function() {
 	return this._db
 }
 
+EntityDB.define = function(definition) {
+	var entityDB = new EntityDB()
+	entityDB.setDefinition(definition)
+	if(!this._db) {
+		throw new Error('call setup() first')
+	}
+	entityDB.setDB(this._db)
+	return entityDB
+}
+
+EntityDB.prototype.setDefinition = function(definition) {
+	this._definition = definition
+}
+
+EntityDB.prototype.setDB = function(db) {
+	this._db = db
+}
+
 EntityDB.prototype.setType = function(entity) {
-	entity._type = this._dataType
+	entity._type = this._definition.name
+}
+
+EntityDB.prototype.dropTable = function(callback) {
+	this._db.query("DROP TABLE IF EXISTS " + escape(this._definition.name), [], function(err, result) {
+		callback(err)
+	})
+}
+
+EntityDB.prototype.createTable = function(callback) {
+	var queryStr = "CREATE TABLE " + escape(this._definition.name)
+	var dataTypes = []
+	for(var attr in this._definition.attributes) {
+		var attrDef = this._definition.attributes[attr]
+		var dataTypeStr = escape(camelToSnakeCase(attr)) + ' ' + attrDef.type
+		if(attrDef.unique) {
+			dataTypeStr += ' UNIQUE'
+		}
+		dataTypes.push(dataTypeStr)
+	}
+	dataTypes.push('id SERIAL')
+	dataTypes.push('CONSTRAINT pk_' + this._definition.name + '_id PRIMARY KEY (id)')
+	queryStr += '( '
+	queryStr += dataTypes.join(', ')
+	queryStr += ' )'
+
+	this._db.query(queryStr, [], function(err, result) {
+		callback(err)
+	})
 }
 
 EntityDB.prototype.save = function(entity, callback) {
@@ -138,7 +181,7 @@ function buildUpdateStmt(entity) {
 }
 
 function prepareStatement(entity) {
-	var tableName = escape(typeToTableName(entity._type))
+	var tableName = escape(entity._type)
 	var fields = []
 	var params = []
 	var values = []
@@ -157,14 +200,6 @@ function prepareStatement(entity) {
 		params: params,
 		values: values
 	}
-}
-
-function typeToTableName(dataType) {
-	if(!dataType) {
-		throw new Error('missing data type')
-	}
-
-	return dataType.toLowerCase() + 's'
 }
 
 var escape = function(input) {

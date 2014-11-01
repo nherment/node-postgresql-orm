@@ -5,19 +5,42 @@ var uuid = require('uuid')
 
 describe('entity db', function() {
 
-	// necessary schema:
-	//
-	// CREATE TABLE users
-	// (
-	//   id SERIAL,
-	//   email character varying,
-	//   first_name character varying
-	// );
+	var testEntityDefinition = {
+		name: 'test_entity',
+		key: 'name',
+		attributes: {
+			email: {
+				type: 'character varying',
+				unique: true
+			},
+			firstName: {
+				type: 'character varying'
+			},
+			lastName: {
+				type: 'character varying'
+			},
+			createdDate: {
+				type: 'timestamp with time zone'
+			}
+		}
+	}
 
 	console.log('Setting up postgres connection to: ', process.env.POSTGRESL_CONNECTION_STRING)
+
 	ORM.setup(process.env.POSTGRESL_CONNECTION_STRING)
-	var User = new ORM('user')
+
+	var User = ORM.define(testEntityDefinition)
+
 	var createdEntity
+
+	it('drop existing table if any', function(done) {
+		User.dropTable(done)
+	})
+
+	it('create table', function(done) {
+		User.createTable(done)
+	})
+
 	it('create entity', function(done) {
 		User.save({email: uuid.v4() + '@foo.bar'}, function(err, savedEntity) {
 			assert.ok(!err, err)
@@ -52,7 +75,7 @@ describe('entity db', function() {
 		})
 	})
 
-	it('retrieve entity', function(done) {
+	it('verify entity update', function(done) {
 		User.load({
 			email: createdEntity.email
 		}, function(err, loadedEntity) {
@@ -60,6 +83,15 @@ describe('entity db', function() {
 			assert.ok(loadedEntity)
 			assert.ok(loadedEntity.id)
 			assert.equal(loadedEntity.id, createdEntity.id)
+			done()
+		})
+	})
+
+	it('create entity violates unicity constraint', function(done) {
+		User.save({email: createdEntity.email}, function(err, savedEntity) {
+			assert.ok(err)
+			console.log(err)
+			assert.ok(!savedEntity)
 			done()
 		})
 	})

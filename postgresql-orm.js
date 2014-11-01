@@ -80,7 +80,6 @@ EntityDB.prototype.create = function(entity, callback) {
 					sqlStmt.values,
 					function(err, result) {
 		if(err) {
-			console.log(err)
 			return callback(err, undefined)
 		}
 		if(result && result.rows && result.rows.length > 0) {
@@ -101,7 +100,6 @@ EntityDB.prototype.update = function(entity, callback) {
 					sqlStmt.values,
 					function(err, result) {
 		if(err) {
-			console.log(err)
 			return callback(err, undefined)
 		}
 		if(result && result.rows && result.rows.length > 0) {
@@ -122,7 +120,6 @@ EntityDB.prototype.load = function(entity, callback) {
 					sqlStmt.values,
 					function(err, result) {
 		if(err) {
-			console.log(err)
 			return callback(err, undefined)
 		}
 		if(result && result.rows && result.rows.length > 0) {

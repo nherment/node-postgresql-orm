@@ -90,7 +90,6 @@ describe('entity db', function() {
 	it('create entity violates unicity constraint', function(done) {
 		User.save({email: createdEntity.email}, function(err, savedEntity) {
 			assert.ok(err)
-			console.log(err)
 			assert.ok(!savedEntity)
 			done()
 		})

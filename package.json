@@ -1,6 +1,6 @@
 {
   "name": "postgresql-orm",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "node to postgresql object relational mapping",
   "main": "postgresql-orm.js",
   "scripts": {

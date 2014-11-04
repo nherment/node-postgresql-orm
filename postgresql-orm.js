@@ -34,7 +34,8 @@ EntityDB.prototype.setType = function(entity) {
 }
 
 EntityDB.prototype.dropTable = function(callback) {
-	this._db.query("DROP TABLE IF EXISTS " + escape(this._definition.name), [], function(err, result) {
+	this._db.query("DROP TABLE IF EXISTS " + escape(this._definition.name) + " CASCADE", [], function(err, result) {
+
 		callback(err)
 	})
 }

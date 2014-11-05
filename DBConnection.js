@@ -6,10 +6,14 @@ function DBConnection(connectionString) {
 }
 
 DBConnection.prototype.client = function(callback) {
+  var self = this
   pg.connect(this.connString, function(err, client, done) {
 
     if(err) {
-      throw err;
+      if(err.code === 'ECONNREFUSED') {
+        throw new Error('Could not connect to postgres at ' + self.connString)
+      }
+      throw err
     }
     callback(client, function() {
       done();

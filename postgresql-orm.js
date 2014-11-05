@@ -135,6 +135,24 @@ EntityDB.prototype.load = function(entity, callback) {
 	})
 }
 
+EntityDB.prototype.delete = function(entity, callback) {
+	this.setType(entity)
+	var sqlStmt = buildDeleteStmt(entity)
+	this._db.query(sqlStmt.queryString,
+					sqlStmt.values,
+					function(err, result) {
+		if(err) {
+			return callback(err, undefined)
+		}
+		if(result) {
+			callback(undefined, result.rowCount)
+		} else {
+			callback(new Error('something went wrong: ' + JSON.stringify(result)), undefined)
+		}
+
+	})
+}
+
 function buildSelectStmt(entity) {
 	var preparedStmt = prepareStatement(entity)
 	var params = []
@@ -174,6 +192,20 @@ function buildUpdateStmt(entity) {
 									' SET ' + params.join(', ') +
 									' WHERE id='+escape(id)+
 									'  RETURNING *',
+		values: preparedStmt.values
+	}
+}
+
+function buildDeleteStmt(entity) {
+	var preparedStmt = prepareStatement(entity)
+	var params = []
+	for(var i = 0 ; i < preparedStmt.params.length ; i++) {
+		params.push(preparedStmt.fields[i] + '=' + preparedStmt.params[i])
+	}
+	return {
+		queryString: 'DELETE FROM ' +
+									preparedStmt.tableName +
+									' WHERE ' + params.join(' AND '),
 		values: preparedStmt.values
 	}
 }

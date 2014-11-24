@@ -31,7 +31,8 @@ DBConnection.prototype.query = function(queryString, values, callback) {
     client.query(queryString, values, function(err, result) {
       done();
       if(err) {
-        var errorWrapper = new Error('SQL query failed')
+        // console.log(err)
+        var errorWrapper = new Error('SQL query failed: ' + err.message)
         errorWrapper.queryString = queryString
         errorWrapper.values = values
         errorWrapper.source = err

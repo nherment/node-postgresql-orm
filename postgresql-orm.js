@@ -1,5 +1,6 @@
 var DBConnection = require('./DBConnection.js')
 var _ = require('lodash')
+var assert = require('assert')
 
 function EntityDB() { }
 
@@ -23,14 +24,13 @@ EntityDB.define = function(definition) {
 
 EntityDB.prototype.setDefinition = function(definition) {
 	this._definition = definition
+	assert.ok(definition, 'definition required')
+	assert.ok(definition.name, 'definition name required')
+	this._type = definition.name
 }
 
 EntityDB.prototype.setDB = function(db) {
 	this._db = db
-}
-
-EntityDB.prototype.setType = function(entity) {
-	entity._type = this._definition.name
 }
 
 EntityDB.prototype.dropTable = function(callback) {
@@ -41,11 +41,11 @@ EntityDB.prototype.dropTable = function(callback) {
 }
 
 EntityDB.prototype.createTable = function(callback) {
-	var queryStr = "CREATE TABLE " + escape(this._definition.name)
+	var queryStr = 'CREATE TABLE "' + escape(this._definition.name) + '" '
 	var dataTypes = []
 	for(var attr in this._definition.attributes) {
 		var attrDef = this._definition.attributes[attr]
-		var dataTypeStr = escape(camelToSnakeCase(attr)) + ' ' + attrDef.type
+		var dataTypeStr = '"' + escape(camelToSnakeCase(attr)) + '" ' + attrDef.type
 		if(attrDef.unique) {
 			dataTypeStr += ' UNIQUE'
 		}
@@ -75,8 +75,7 @@ EntityDB.prototype.save = function(entity, callback) {
 }
 
 EntityDB.prototype.create = function(entity, callback) {
-	this.setType(entity)
-	var sqlStmt = buildInsertStmt(entity)
+	var sqlStmt = this.buildInsertStmt(entity)
 	this._db.query(sqlStmt.queryString,
 					sqlStmt.values,
 					function(err, result) {
@@ -95,8 +94,8 @@ EntityDB.prototype.create = function(entity, callback) {
 }
 
 EntityDB.prototype.update = function(entity, callback) {
-	this.setType(entity)
-	var sqlStmt = buildUpdateStmt(entity)
+	var sqlStmt = this.buildUpdateStmt(entity)
+	var self = this
 	this._db.query(sqlStmt.queryString,
 					sqlStmt.values,
 					function(err, result) {
@@ -105,7 +104,7 @@ EntityDB.prototype.update = function(entity, callback) {
 		}
 		if(result && result.rows && result.rows.length > 0) {
 			var updatedEntity = dbToJS(result.rows[0])
-			updatedEntity._type = entity._type
+			updatedEntity._type = self._type
 			callback(undefined, updatedEntity)
 		} else {
 			callback(new Error('something went wrong: ' + JSON.stringify(result)), undefined)
@@ -115,8 +114,8 @@ EntityDB.prototype.update = function(entity, callback) {
 }
 
 EntityDB.prototype.load = function(entity, callback) {
-	this.setType(entity)
-	var sqlStmt = buildSelectStmt(entity)
+	var sqlStmt = this.buildSelectStmt(entity)
+	var self = this
 	this._db.query(sqlStmt.queryString,
 					sqlStmt.values,
 					function(err, result) {
@@ -125,7 +124,7 @@ EntityDB.prototype.load = function(entity, callback) {
 		}
 		if(result && result.rows && result.rows.length > 0) {
 			var foundEntity = dbToJS(result.rows[0])
-			foundEntity._type = entity._type
+			foundEntity._type = self._type
 			callback(undefined, foundEntity)
 		} else {
 			// not found
@@ -135,9 +134,35 @@ EntityDB.prototype.load = function(entity, callback) {
 	})
 }
 
+EntityDB.prototype.list = function(query, callback) {
+	var sqlStmt = this.buildSelectStmt(query.filter, query.sort, query.limit, query.offset)
+	var self = this
+	// console.log(sqlStmt.queryString)
+	this._db.query(sqlStmt.queryString,
+		sqlStmt.values,
+		function(err, result) {
+			if(err) {
+				return callback(err, undefined)
+			}
+			if(result && result.rows && result.rows.length > 0) {
+				var entities = []
+				for(var i = 0 ; i < result.rows.length ; i++) {
+					var entity = dbToJS(result.rows[i])
+					entity._type = self._type
+					entities.push(entity)
+				}
+
+				callback(undefined, entities)
+			} else {
+				// not found
+				callback(undefined, null)
+			}
+
+		})
+	}
+
 EntityDB.prototype.delete = function(entity, callback) {
-	this.setType(entity)
-	var sqlStmt = buildDeleteStmt(entity)
+	var sqlStmt = this.buildDeleteStmt(entity)
 	this._db.query(sqlStmt.queryString,
 					sqlStmt.values,
 					function(err, result) {
@@ -153,25 +178,51 @@ EntityDB.prototype.delete = function(entity, callback) {
 	})
 }
 
-function buildSelectStmt(entity) {
-	var preparedStmt = prepareStatement(entity)
+EntityDB.prototype.buildSelectStmt = function(entity, sort, limit, offset) {
+
+	var preparedStmt = this.prepareStatement(entity)
 	var params = []
 	for(var i = 0 ; i < preparedStmt.params.length ; i++) {
 		params.push(preparedStmt.fields[i] + '=' + preparedStmt.params)
 	}
+
+	var queryString = 'SELECT * FROM ' + preparedStmt.tableName
+
+	if(params.length > 0) {
+		queryString += ' WHERE ' + params.join(' AND ')
+	}
+
+	if(sort) {
+		var sortStmt = ''
+		for(var attributeName in sort) {
+			sortStmt += ' ' + escape(camelToSnakeCase(attributeName))
+			if(sort[attributeName] && sort[attributeName].toLowerCase && sort[attributeName].toLowerCase() === 'desc') {
+				sortStmt += ' DESC'
+			} else {
+				sortStmt += ' ASC'
+			}
+		}
+		if(sortStmt) {
+			queryString += ' ORDER BY' + sortStmt
+		}
+	}
+	if(limit) {
+		queryString += ' LIMIT ' + parseInt(limit)
+	}
+	if(offset) {
+		queryString += ' OFFSET ' + parseInt(offset)
+	}
 	return {
-		queryString: 'SELECT * FROM ' +
-									preparedStmt.tableName +
-									' WHERE ' + params.join(' AND '),
+		queryString: queryString,
 		values: preparedStmt.values
 	}
 }
 
-function buildInsertStmt(entity) {
-	var preparedStmt = prepareStatement(entity)
+EntityDB.prototype.buildInsertStmt = function(entity) {
+	var preparedStmt = this.prepareStatement(entity)
 	return {
 		queryString: 'INSERT INTO ' +
-									preparedStmt.tableName +
+									'"' + preparedStmt.tableName + '"' +
 									' (' + preparedStmt.fields.join(',') + ')' +
 									' values (' + preparedStmt.params.join(',') + ')' +
 									'  RETURNING id',
@@ -179,9 +230,9 @@ function buildInsertStmt(entity) {
 	}
 }
 
-function buildUpdateStmt(entity) {
+EntityDB.prototype.buildUpdateStmt = function(entity) {
 	var id = entity.id
-	var preparedStmt = prepareStatement(entity)
+	var preparedStmt = this.prepareStatement(entity)
 	var params = []
 	for(var i = 0 ; i < preparedStmt.params.length ; i++) {
 		params.push(preparedStmt.fields[i] + '=' + preparedStmt.params[i])
@@ -196,8 +247,8 @@ function buildUpdateStmt(entity) {
 	}
 }
 
-function buildDeleteStmt(entity) {
-	var preparedStmt = prepareStatement(entity)
+EntityDB.prototype.buildDeleteStmt = function(entity) {
+	var preparedStmt = this.prepareStatement(entity)
 	var params = []
 	for(var i = 0 ; i < preparedStmt.params.length ; i++) {
 		params.push(preparedStmt.fields[i] + '=' + preparedStmt.params[i])
@@ -210,17 +261,18 @@ function buildDeleteStmt(entity) {
 	}
 }
 
-function prepareStatement(entity) {
-	var tableName = escape(entity._type)
+EntityDB.prototype.prepareStatement = function(entity) {
+	var tableName = escape(this._type)
 	var fields = []
 	var params = []
 	var values = []
-
-	for(var attr in entity) {
-		if(entity.hasOwnProperty(attr) && !/^_/.test(attr) && attr !== 'id') {
-			fields.push('"' + escape(camelToSnakeCase(attr)) + '"')
-			params.push('$' + (params.length+1) )
-			values.push(entity[attr])
+	if(entity) {
+		for(var attr in entity) {
+			if(entity.hasOwnProperty(attr) && !/^_/.test(attr) && attr !== 'id') {
+				fields.push('"' + escape(camelToSnakeCase(attr)) + '"')
+				params.push('$' + (params.length+1) )
+				values.push(entity[attr])
+			}
 		}
 	}
 

@@ -171,12 +171,12 @@ EntityDB.prototype.count = function(entity, callback) {
 			if(err) {
 				return callback(err, undefined)
 			}
-			if(result) {
+			if(result && result.rows && result.rows[0]) {
 
-				callback(undefined, result)
+				callback(undefined, result.rows[0].count)
 			} else {
 				// not found
-				callback(undefined, null)
+				callback(undefined, 0)
 			}
 		}
 	)

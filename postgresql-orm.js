@@ -157,9 +157,30 @@ EntityDB.prototype.list = function(query, callback) {
 				// not found
 				callback(undefined, null)
 			}
+		}
+	)
+}
 
-		})
-	}
+EntityDB.prototype.count = function(entity, callback) {
+	var sqlStmt = this.buildCountStmt(entity)
+	var self = this
+	// console.log(sqlStmt.queryString)
+	this._db.query(sqlStmt.queryString,
+		sqlStmt.values,
+		function(err, result) {
+			if(err) {
+				return callback(err, undefined)
+			}
+			if(result) {
+
+				callback(undefined, result)
+			} else {
+				// not found
+				callback(undefined, null)
+			}
+		}
+	)
+}
 
 EntityDB.prototype.delete = function(entity, callback) {
 	var sqlStmt = this.buildDeleteStmt(entity)
@@ -176,6 +197,24 @@ EntityDB.prototype.delete = function(entity, callback) {
 		}
 
 	})
+}
+
+EntityDB.prototype.buildCountStmt = function(entity) {
+	var preparedStmt = this.prepareStatement(entity)
+	var params = []
+	for(var i = 0 ; i < preparedStmt.params.length ; i++) {
+		params.push(preparedStmt.fields[i] + '=' + preparedStmt.params)
+	}
+
+	var queryString = 'SELECT count(*) FROM ' + preparedStmt.tableName
+	if(params.length > 0) {
+		queryString += ' WHERE ' + params.join(' AND ')
+	}
+
+	return {
+		queryString: queryString,
+		values: preparedStmt.values
+	}
 }
 
 EntityDB.prototype.buildSelectStmt = function(entity, sort, limit, offset) {

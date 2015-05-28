@@ -203,7 +203,8 @@ EntityDB.prototype.buildCountStmt = function(entity) {
 	var preparedStmt = this.prepareStatement(entity)
 	var params = []
 	for(var i = 0 ; i < preparedStmt.params.length ; i++) {
-		params.push(preparedStmt.fields[i] + '=' + preparedStmt.params)
+		params.push(preparedStmt.fields[i] + '=' + 
+preparedStmt.params[i])
 	}
 
 	var queryString = 'SELECT count(*) FROM ' + preparedStmt.tableName
@@ -222,7 +223,8 @@ EntityDB.prototype.buildSelectStmt = function(entity, sort, limit, offset) {
 	var preparedStmt = this.prepareStatement(entity)
 	var params = []
 	for(var i = 0 ; i < preparedStmt.params.length ; i++) {
-		params.push(preparedStmt.fields[i] + '=' + preparedStmt.params)
+		params.push(preparedStmt.fields[i] + '=' + 
+preparedStmt.params[i])
 	}
 
 	var queryString = 'SELECT * FROM ' + preparedStmt.tableName

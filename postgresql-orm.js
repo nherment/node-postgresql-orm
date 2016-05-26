@@ -37,7 +37,7 @@ EntityDB.prototype.dropTable = function(callback) {
 	this._db.query("DROP TABLE IF EXISTS " + escape(this._definition.name) + " CASCADE", [], function(err, result) {
 
 		callback(err)
-	})
+	})prepareStatement
 }
 
 EntityDB.prototype.createTable = function(callback) {
@@ -307,7 +307,7 @@ EntityDB.prototype.prepareStatement = function(entity) {
 	var values = []
 	if(entity) {
 		for(var attr in entity) {
-			if(entity.hasOwnProperty(attr) && !/^_/.test(attr) && attr !== 'id') {
+			if(entity.hasOwnProperty(attr) && !/^_/.test(attr)) {
 				fields.push('"' + escape(camelToSnakeCase(attr)) + '"')
 				params.push('$' + (params.length+1) )
 				values.push(entity[attr])
